@@ -1,7 +1,11 @@
 import requests
 import pandas as pd
+import os
+from dotenv import load_dotenv
 
-api_key = "f7e42fb39efea92a9812ced9c17331da"
+load_dotenv()
+
+api_key = os.getenv("WEATHER_API_KEY")
 locations = ["Jakarta Barat", "Jakarta Pusat", "Jakarta Selatan", "Jakarta Timur", "Jakarta Utara"]
 base_url = "https://api.openweathermap.org/geo/1.0/direct"
 

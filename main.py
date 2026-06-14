@@ -1,5 +1,6 @@
 from weather import get_weather_data
 from checker import check_weather_conditions
+from email_notifier import send_email
 import os
 from dotenv import load_dotenv
 import pandas as pd
@@ -16,7 +17,6 @@ if __name__ == "__main__":
     
     if is_checklisted:
         print("Weather conditions match the checklist. Sending notifications...")
-        for data in checklisted_data:
-            print(f"Notification: {data['location']} is experiencing {data['weather_conditions']} with {data['description']}.")
+        send_email(checklisted_data)
     else:
         print("No weather conditions match the checklist.")
