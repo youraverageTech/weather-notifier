@@ -1,6 +1,6 @@
 import json
 import os
-from logger import setup_logger, get_logger
+from scripts.logger import setup_logger, get_logger
 from datetime import datetime
 
 setup_logger()

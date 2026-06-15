@@ -5,7 +5,7 @@ Filters weather data to detect rainy, drizzly, or thunderstorm conditions for no
 """
 
 # Import logging utilities for tracking application activity and debugging
-from logger import setup_logger, get_logger
+from scripts.logger import setup_logger, get_logger
 
 # Initialize and configure the logging system for activity tracking
 setup_logger()

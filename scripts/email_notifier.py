@@ -9,7 +9,7 @@ import smtplib
 from email.mime.text import MIMEText
 import os
 from dotenv import load_dotenv
-from logger import setup_logger, get_logger
+from scripts.logger import setup_logger, get_logger
 from datetime import datetime
 
 # Initialize load env file

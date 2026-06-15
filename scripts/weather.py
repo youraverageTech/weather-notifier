@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv 
 import pandas as pd  
 from datetime import datetime  
-from logger import setup_logger, get_logger  
+from scripts.logger import setup_logger, get_logger  
 
 # Initialize logging system for tracking activity and debugging
 setup_logger()
