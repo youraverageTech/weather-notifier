@@ -23,7 +23,7 @@ sender = os.getenv("SENDER_EMAIL")
 password = os.getenv("APP_PASSWORD")
 receiver = os.getenv("RECEIVER_EMAIL")
 
-def send_email(checklisted_data):
+def send_email(checklisted_data, subject="Weather Alert Notification"):
     """
     Sends a formatted HTML email with weather alert information to the configured recipient.
     
@@ -109,7 +109,7 @@ def send_email(checklisted_data):
             # Create MIME email message with HTML formatting
             email_message = MIMEText(msg, "html")
             # Set email subject line
-            email_message["Subject"] = "Weather Alert Notification"
+            email_message["Subject"] = subject
             # Set sender email address
             email_message["From"] = sender
             # Set recipient email address

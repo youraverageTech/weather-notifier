@@ -47,3 +47,6 @@ def check_weather_conditions(weather_data):
         logger.info("No adverse weather conditions found.")
 
     return bool(matched), matched
+
+def is_adverse_condition(data):
+    return 
