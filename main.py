@@ -19,7 +19,7 @@ CSV_PATH = os.path.join(DATA_DIR, "weather_locations.csv")
 BASE_URL = "https://api.openweathermap.org/data/2.5/weather"
 ADVERSE_CONDITIONS = ["Rain", "Drizzle", "Thunderstorm"]
 
-def load_locations():
+def load_locations() -> pd.DataFrame:
     """
     Read weather_locations.csv, exit if the file not exist
 
@@ -66,8 +66,9 @@ def process_alerts(weather_data: list, state: dict):
     return to_notify_started, to_notify_stopped, state
 
 def run():
-    locations = load_locations
-    state = load_state
+    logger.info("Starting Weather Notifier Program...")
+    locations = load_locations()
+    state = load_state()
 
     weather_data = get_weather_data(locations, API_KEY, BASE_URL)
     weather_history(weather_data)
@@ -76,8 +77,6 @@ def run():
         logger.warning("No weather data returned, skipping checks.")
         save_state(state)
         return
-    
-    is_any_adverse, matched = check_weather_conditions(weather_data)
 
     to_notify_started, to_notify_stopped, state = process_alerts(weather_data, state)
 
@@ -91,4 +90,7 @@ def run():
 
     save_state(state)
 
-    logger.info("Weather check completed.")
+    logger.info("Weather check completed.\n")
+
+if __name__ == "__main__":
+    run()
