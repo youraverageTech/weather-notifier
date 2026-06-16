@@ -5,3 +5,4 @@ test.py
 scripts/checker.py
 logs/
 data/weather_history
+.astro/
