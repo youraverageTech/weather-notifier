@@ -4,11 +4,23 @@ This scripts is to create log for the projects code.
 
 import logging
 import os
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 log_file = os.path.join(LOG_DIR, "logger.log")
 logger_name = "weather_notifier"
+TIMEZONE = ZoneInfo("Asia/Jakarta")
+
+class JakartaFormatter(logging.Formatter):
+    """Custom formatter that renders timestamps in Asia/Jakarta timezone."""
+
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created, tz=TIMEZONE)
+        if datefmt:
+            return dt.strftime(datefmt)
+        return dt.isoformat()
 
 # Setting up logging
 def setup_logger():
@@ -19,7 +31,10 @@ def setup_logger():
         return logger
     
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter(fmt= "%(asctime)s | %(levelname)-8s | %(module)-10s | %(message)s", datefmt= "%Y-%m-%d %H:%M:%S")
+    formatter = JakartaFormatter(
+        fmt="%(asctime)s | %(levelname)-8s | %(module)-10s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
 
     file_handler = logging.FileHandler(log_file, encoding="utf-8")
     file_handler.setFormatter(formatter)
