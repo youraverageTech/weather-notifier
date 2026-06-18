@@ -2,7 +2,6 @@
 .venv/
 __pycache__/
 test.py
-scripts/checker.py
 logs/
-data/weather_history
 .astro/
+/include/logs

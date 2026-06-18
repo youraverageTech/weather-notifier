@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv 
 import pandas as pd  
 from datetime import datetime  
-from scripts.logger import setup_logger, get_logger  
+from include.logger import setup_logger, get_logger  
 
 # Initialize logging system for tracking activity and debugging
 setup_logger()
@@ -74,8 +74,8 @@ def get_weather_data(locations: pd.DataFrame, api_key: str, base_url: str) -> li
                         "humidity": humidity,  # Store humidity percentage
                         "wind_speed": wind_speed,  # Store wind speed
                         "weather_conditions": weather_conditions,  # Store main weather condition
-                        "date": datetime.fromtimestamp(data["dt"]).date(),  # Convert Unix timestamp to date
-                        "time": datetime.fromtimestamp(data["dt"]).time()  # Convert Unix timestamp to time
+                        "date": datetime.fromtimestamp(data["dt"]).strftime("%Y-%m-%d"),  # Convert Unix timestamp to date
+                        "time": datetime.fromtimestamp(data["dt"]).strftime("%H:%M:%S")  # Convert Unix timestamp to time
                     })
                 else:
                     # Log warning if no data was returned for a location

@@ -5,13 +5,14 @@ This scripts is to create log for the projects code.
 import logging
 import os
 
-log_dir = "logs"
-log_file = os.path.join(log_dir, "logger.log")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+log_file = os.path.join(LOG_DIR, "logger.log")
 logger_name = "weather_notifier"
 
 # Setting up logging
 def setup_logger():
-    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(LOG_DIR, exist_ok=True)
     logger = logging.getLogger(logger_name)
 
     if logger.handlers:

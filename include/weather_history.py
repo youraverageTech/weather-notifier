@@ -2,44 +2,70 @@
 Weather history module for the weather notifier application.
 
 This module handles storing and managing historical weather data by appending
-weather records to a CSV file. It provides functionality to save weather data
+weather records to a postgres database. It provides functionality to save weather data
 in a persistent format for later analysis and tracking.
 """
 
-import pandas as pd
-import os
+from airflow.providers.postgres.hooks.postgres import PostgresHook
+from include.logger import setup_logger, get_logger
 
-# Directory where weather history data is stored
-dir = "data"
-# Full path to the weather history CSV file
-file_data = os.path.join(dir, "weather_history")
+setup_logger()
+logger = get_logger()
 
-def weather_history(weather_data: list):
-    """
-    Save weather data to a CSV file.
+def init_table() -> None:
+    hook = PostgresHook(postgres_conn_id= "weather_db_conn")
     
-    Appends weather records to the weather_history CSV file. Creates the file
-    if it doesn't exist, otherwise appends new records to the existing file.
-    
-    Args:
-        weather_data (list): A list of dictionaries containing weather data.
-                           Each dictionary should contain weather information
-                           (e.g., city, temperature, rain status, timestamp).
-    
-    Returns:
-        None
-        
-    Note:
-        - Does nothing if weather_data is empty.
-        - Creates CSV file with headers on first write.
-        - Appends data without headers on subsequent writes.
-    """
+    with hook.get_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS weather_history (
+                id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                location            TEXT NOT NULL,
+                weather_conditions  TEXT NOT NULL,
+                description         TEXT,
+                temperature         FLOAT,
+                humidity            INTEGER,
+                wind_speed          REAL,
+                date                DATE,
+                time                TIME
+            )    
+        """)
+        conn.commit()
+        logger.info("Table weather_history created successfully.")
+
+def save_weather_history(weather_data: list) -> None:
     if not weather_data:
-        print("No weather data to save.")
-
+        logger.warning("No weather data to save.")
         return
-    df = pd.DataFrame(weather_data)
-    if not os.path.exists(file_data):
-        df.to_csv(file_data, index=False)
-    else:
-        df.to_csv(file_data, mode='a', header=False, index=False)
+
+    hook = PostgresHook(postgres_conn_id= "weather_db_conn")
+
+    rows = [(
+        data['location'],
+        data['weather_conditions'],
+        data['description'],
+        data['temperature'],
+        data['humidity'],
+        data['wind_speed'],
+        data['date'],
+        data['time']
+    ) for data in weather_data]
+
+    with hook.get_conn() as conn:
+        cursor = conn.cursor()
+
+        cursor.executemany("""
+            INSERT INTO weather_history (
+                location,
+                weather_conditions,
+                description,
+                temperature,
+                humidity,
+                wind_speed,
+                date,
+                time
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, rows)
+        conn.commit()
+        logger.info(f"Saved {len(rows)} record(s) to database.")
+

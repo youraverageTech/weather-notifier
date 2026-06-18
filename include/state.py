@@ -8,7 +8,7 @@ last check time, and when alerts were sent.
 
 import json
 import os
-from scripts.logger import setup_logger, get_logger
+from include.logger import setup_logger, get_logger
 from datetime import datetime
 
 setup_logger()
