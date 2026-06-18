@@ -22,7 +22,7 @@ CSV_PATH = os.path.join(BASE_DIR, "include", "data", "weather_locations.csv")
 @dag(
     dag_id = "Weather_Notifier_Pipeline",
     start_date = pendulum.datetime(2026, 6, 1, tz="Asia/Jakarta"),
-    schedule = timedelta(minutes=10),
+    schedule = timedelta(minutes=5),
     catchup = False,
     default_args = {
         "retries": 1,

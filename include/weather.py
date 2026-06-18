@@ -52,6 +52,10 @@ def get_weather_data(locations: pd.DataFrame, api_key: str, base_url: str) -> li
         try:
             response = requests.get(base_url, params=params)
             # Checking API response
+            if response.status_code == 429:
+                logger.error("Rate limit exceeded (429). Stopping further requests.")
+                raise RuntimeError("OpenWeather API rate limit exceeded")
+
             if response.status_code == 200:
                 # Parsing the json from API
                 data = response.json()
