@@ -9,9 +9,12 @@ import requests
 import pandas as pd
 import os
 from dotenv import load_dotenv
+from include.logger import setup_logger, get_logger
 
 # Load environment variables from .env file
 load_dotenv()
+setup_logger()
+logger = get_logger()
 
 # Retrieve OpenWeather API key from environment variables for authentication
 api_key = os.getenv("WEATHER_API_KEY")
@@ -19,6 +22,10 @@ api_key = os.getenv("WEATHER_API_KEY")
 locations = ["Jakarta Barat", "Jakarta Pusat", "Jakarta Selatan", "Jakarta Timur", "Jakarta Utara"]
 # Set the base URL for OpenWeather Geocoding API endpoint
 base_url = "https://api.openweathermap.org/geo/1.0/direct"
+# path save file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+FILE_SAVE = os.path.join(DATA_DIR, "weather_locations.csv")
 
 def get_coordinates(locations):
     """
@@ -32,6 +39,7 @@ def get_coordinates(locations):
         list: List of dictionaries containing location name, latitude, and longitude
               Each dictionary has keys: 'name', 'latitude', 'longitude'
     """
+    logger.info("Starting fetch locations informations...")
     # Initialize empty list to store location data with coordinates
     weather_locations = []
     # Iterate through each location name
@@ -44,10 +52,9 @@ def get_coordinates(locations):
         }
         # Make HTTP GET request to geocoding API
         response = requests.get(base_url, params=params)
-        # Check if the API request was successful (status code 200)
-        if response.status_code == 200:
-            # Attempt to parse and process the API response
-            try:
+        try:
+            # Check if the API request was successful (status code 200)
+            if response.status_code == 200:
                 # Parse JSON response from the API
                 data = response.json()
                 # Verify that response contains location data
@@ -65,19 +72,12 @@ def get_coordinates(locations):
                         'longitude': lon  # Store longitude
                     })
             # Catch HTTP errors that might occur during API calls
-            except requests.HTTPError as http_err:
-                # Print error message if API call fails for a location
-                print(f"HTTP error occurred for {location}: {http_err}")
+        except requests.HTTPError as http_err:
+            # Print error message if API call fails for a location
+            logger.error(f"HTTP error occurred for {location}: {http_err}")
     
     # Create pandas DataFrame from the collected location data
     df = pd.DataFrame(weather_locations)
-    # Display the DataFrame with all location coordinates in console
-    print(df)
     # Export the location data to CSV file for later use
-    df.to_csv('weather_locations.csv', index=False)
-    
-    # Return the list of location dictionaries
-    return weather_locations
-
-if __name__ == "__main__":
-    get_coordinates(locations)
+    df.to_csv(FILE_SAVE, index=False)
+    logger.info("Process complete. Location to get {} cities".format(len(df)))

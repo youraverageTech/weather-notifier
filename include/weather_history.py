@@ -31,7 +31,6 @@ def init_table() -> None:
             )    
         """)
         conn.commit()
-        logger.info("Table weather_history created successfully.")
 
 def save_weather_history(weather_data: list) -> None:
     if not weather_data:

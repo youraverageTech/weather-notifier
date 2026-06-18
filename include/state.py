@@ -14,9 +14,10 @@ from datetime import datetime
 setup_logger()
 logger = get_logger()
 
-# Directory and file path for storing state data
-state_dir = "data"
-file_state = os.path.join(state_dir, "state.json")
+# Dirctory and file path for storing state data
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATE_DIR = os.path.join(BASE_DIR, "data")
+file_state = os.path.join(STATE_DIR, "state.json")
 
 def load_state():
     """

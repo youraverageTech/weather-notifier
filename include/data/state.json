@@ -1,27 +1,27 @@
 {
     "Jakarta Barat": {
         "is_raining": false,
-        "last_checked": "2026-06-16 17:13:12",
+        "last_checked": "2026-06-18 04:01:23",
         "alert_sent_at": null
     },
     "Jakarta Pusat": {
         "is_raining": false,
-        "last_checked": "2026-06-16 17:13:12",
+        "last_checked": "2026-06-18 04:01:23",
         "alert_sent_at": null
     },
     "Jakarta Selatan": {
         "is_raining": false,
-        "last_checked": "2026-06-16 17:13:12",
+        "last_checked": "2026-06-18 04:01:23",
         "alert_sent_at": null
     },
     "Jakarta Timur": {
         "is_raining": false,
-        "last_checked": "2026-06-16 17:13:12",
+        "last_checked": "2026-06-18 04:01:23",
         "alert_sent_at": null
     },
     "Jakarta Utara": {
         "is_raining": false,
-        "last_checked": "2026-06-16 17:13:12",
+        "last_checked": "2026-06-18 04:01:23",
         "alert_sent_at": null
     }
 }
