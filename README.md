@@ -1,231 +1,209 @@
-# Weather Notifier Project
+# Automated Weather Notifier Pipeline
 
-A sophisticated Apache Airflow-based weather monitoring system that fetches real-time weather data from the OpenWeather API, detects adverse weather conditions, and sends email notifications to alert users about rain, drizzle, and thunderstorms.
+Automated weather monitoring pipeline that checks real-time weather conditions for multiple cities, detects adverse weather (rain, drizzle, thunderstorm), avoids duplicate alerts through state-based transition detection, and sends email notifications. Built with Apache Airflow (via Astro CLI), PostgreSQL, and the OpenWeatherMap API.
+
+## Overview
+
+Weather Notifier solves a simple but common automation problem: instead of manually checking the weather, this pipeline periodically polls the OpenWeatherMap API for a list of cities, compares the result against the last known state, and only sends an email when a condition actually *changes* — rain starting or rain stopping. Every observation is also archived to a PostgreSQL database for later analysis.
+
+The project evolved from a single Python script into an orchestrated Airflow DAG, reflecting a typical path from automation script to data pipeline.
 
 ## Features
 
-- **Real-time Weather Monitoring**: Fetches current weather data for multiple locations using the OpenWeather API
-- **Adverse Weather Detection**: Automatically detects and alerts on rain, drizzle, and thunderstorm conditions
-- **Smart Alerting**: Sends email notifications only when weather conditions transition to adverse states (avoiding duplicate alerts)
-- **State Management**: Tracks weather state changes per location to differentiate between new alerts and continued conditions
-- **Multi-location Support**: Monitor multiple cities or coordinates simultaneously
-- **Email Notifications**: Sends formatted HTML emails with detailed weather information
-- **Containerized**: Runs in Docker for consistent deployment across environments
-- **Airflow Orchestration**: Uses Apache Airflow for scheduling and orchestrating weather checks
+- **Multi-city monitoring** — checks weather for any number of locations defined in a CSV file
+- **Adverse condition detection** — flags rain, drizzle, and thunderstorm conditions
+- **Alert deduplication** — uses persisted state to notify only on transitions (clear → rain, rain → clear), not on every run
+- **Email notifications** — HTML-formatted alerts sent via Gmail SMTP, with separate messages for "rain started" and "rain stopped"
+- **Historical data storage** — every weather check is logged to a PostgreSQL table for trend analysis
+- **Orchestrated scheduling** — runs on a fixed interval via Apache Airflow, with retries and branching logic
+- **Centralized logging** — all modules log to a single file through a shared logger instance
+
+## Architecture
+
+```
+                    ┌────────────────────-─┐
+                    │  weather_locations   │
+                    │       .csv           │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌───────────────────-──┐
+                    │   load_locations     │
+                    └──────────┬───────────┘
+                               │
+                               ▼
+                    ┌────────────────────-─┐
+                    │  fetch_weather_data  │──── OpenWeatherMap API
+                    └──────────┬───────────┘
+                               │
+                ┌──────────────┴──────────────-┐
+                ▼                              ▼
+    ┌────────────────────--─┐        ┌────────────────────---──┐
+    │  load_weather_history │        │ check_and_notify_alerts │
+    │   (→ PostgreSQL)      │        │   (state comparison)    │
+    └────────────────────--─┘        └──────────┬──────────---─┘
+                                                │
+                                                ▼
+                                    ┌───────────────────-──┐
+                                    │   check_conditions   │
+                                    │     (branch task)    │
+                                    └──────────-┬──────────┘
+                                  ┌─────────────┴───────────-──┐
+                                  ▼                            ▼
+                        ┌────────────────--─┐          ┌─────────────────┐
+                        │  sending_alerts   │          │   end_pipeline  │
+                        │  (email via SMTP) │          │   (no-op log)   │
+                        └────────────────--─┘          └─────────────────┘
+```
+
+## Tech Stack
+
+| Component | Technology |
+|---|---|
+| Orchestration | Apache Airflow (TaskFlow API) via Astro CLI |
+| Language | Python 3.13 |
+| Weather data | OpenWeatherMap API (current weather + geocoding) |
+| State | Json File |
+| history storage | PostgreSQL (Docker) |
+| Notifications | Gmail SMTP (`smtplib`) |
+| Database admin | pgAdmin (Docker) |
+| Containerization | Docker Compose (via Astro CLI) |
 
 ## Project Structure
 
 ```
 weather-notifier/
 ├── dags/
-│   ├── main.py              # Entry point for weather monitoring logic
-│   └── weather_notifier.py  # Airflow DAG definition
+│   └── weather_notifier.py        # Airflow DAG main workflow (TaskFlow API)
+│   └── get_lat_lon_locations.py   # Airflow DAG to get lat lon location (TaskFlow API)
 ├── include/
-│   ├── weather.py           # OpenWeather API integration
-│   ├── email_notifier.py    # Email sending functionality
-│   ├── state.py             # Weather state management
-│   ├── logger.py            # Logging setup
-│   ├── weather_history.py   # Historical weather data tracking
-│   ├── get_locations_lat_lon.py  # Location coordinate fetcher
-│   └── data/
-│       ├── state.json       # Persisted weather state
-│       └── weather_locations.csv  # Monitored locations list
-├── tests/                   # Test suite
-├── logs/                    # Application logs
-├── Dockerfile              # Docker container configuration
-├── docker-compose.override.yml  # Compose overrides
-├── airflow_settings.yaml    # Airflow configuration
-├── requirements.txt         # Python dependencies
-└── README.md               # This file
+│   ├── data/
+│   │   └── weather_locations.csv  # List of cities with lat/lon
+|   |   └── state.json             # List of weather state
+|   ├── logs/
+│   │   └── logger.log             # Log process
+│   ├── weather.py                 # OpenWeatherMap API calls
+│   ├── checker.py                 # Adverse weather condition detection
+│   ├── state.py                   # State persistence & transition detection
+│   ├── weather_history.py         # PostgreSQL history logging
+│   ├── email_notifier.py          # HTML email composition & sending
+│   └── logger.py                  # Centralized logging setup
+├── plugins/
+├── tests/
+├── docker-compose.override.yml    # Custom postgres + pgAdmin services
+├── Dockerfile
+├── packages.txt
+├── requirements.txt
+├── .env                            # Secrets (not committed)
+├── .env.example                    # Template for required variables
+└── .gitignore
 ```
 
-## Prerequisites
+## Module Responsibilities
 
-- Python 3.8 or higher
-- Docker and Docker Compose (for containerized deployment)
-- OpenWeather API key (free tier available at https://openweathermap.org/api)
-- Gmail account with App Password (for email notifications)
+| Module | Responsibility |
+|---|---|
+| `weather.py` | Fetches coordinates and current weather data from OpenWeatherMap |
+| `state.py` | Loads/saves city state, detects transitions (rain started / rain stopped) to prevent duplicate alerts |
+| `weather_history.py` | Initializes the history table and appends each weather observation to PostgreSQL |
+| `email_notifier.py` | Builds and sends HTML email alerts via Gmail SMTP |
+| `logger.py` | Provides a single shared logger (`weather_notifier`) used across all modules |
 
-## Installation
+## How Alert Deduplication Works
 
-### 1. Clone the Repository
+Running the pipeline every few minutes means the same rain event would otherwise trigger a new email on every run. To avoid this, each city's last known condition is persisted and compared against the current reading:
+
+| Previous state | Current state | Action |
+|---|---|---|
+| Not raining | Raining | Send "rain started" alert |
+| Raining | Raining | No alert (already notified) |
+| Raining | Not raining | Send "rain stopped" alert |
+| Not raining | Not raining | No alert |
+
+This is a simplified version of the transition-detection pattern used in production monitoring systems (e.g. Prometheus Alertmanager, PagerDuty).
+
+## Database Schema
+
+**`weather_history`** — append-only log of every observation
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | `BIGINT` (identity) | Primary key |
+| `location` | `TEXT` | City name |
+| `weather_conditions` | `TEXT` | Main condition (e.g. `Rain`, `Clear`) |
+| `description` | `TEXT` | Detailed description |
+| `temperature` | `FLOAT` | Temperature in °C |
+| `humidity` | `INTEGER` | Humidity percentage |
+| `wind_speed` | `FLOAT` | Wind speed in m/s |
+| `date` / `time` | `DATE` / `TIME` | Observation timestamp |
+
+## Setup
+
+### Prerequisites
+
+- [Astro CLI](https://www.astronomer.io/docs/astro/cli/install-cli)
+- Docker Desktop
+- An [OpenWeatherMap API key](https://openweathermap.org/api)
+- A Gmail account with an [App Password](https://support.google.com/accounts/answer/185833) generated
+
+### 1. Clone and configure environment variables
 
 ```bash
-git clone <repository-url>
+git clone <repo-url>
 cd weather-notifier
+cp .env.example .env
 ```
 
-### 2. Set Up Environment Variables
-
-Create a `.env` file in the project root with the following variables:
+Fill in `.env`:
 
 ```env
-# OpenWeather API Configuration
-WEATHER_API_KEY=your_openweather_api_key_here
+WEATHER_API_KEY=your_openweathermap_key
+SENDER_EMAIL=you@gmail.com
+APP_PASSWORD=your_gmail_app_password
+RECEIVER_EMAIL=recipient@gmail.com
 
-# Email Configuration
-SENDER_EMAIL=your_gmail_address@gmail.com
-APP_PASSWORD=your_gmail_app_password_here
-RECEIVER_EMAIL=recipient_email@example.com
-
-# Optional: Logging and other settings
-LOG_LEVEL=INFO
+AIRFLOW_CONN_WEATHER_DB_CONN=postgresql://postgres:postgres@weather_db:5432/weather_db
 ```
 
-**Note**: For Gmail, you need to:
-1. Enable 2-Factor Authentication on your Google Account
-2. Generate an App Password at https://myaccount.google.com/apppasswords
-3. Use the generated 16-character password in `APP_PASSWORD`
+### 2. Define your locations
 
-### 3. Set Up Location Data
+Edit `include/data/weather_locations.csv` with the cities you want to monitor (name, latitude, longitude).
 
-Create a CSV file at `include/data/weather_locations.csv` with the following format:
-
-```csv
-name,latitude,longitude
-New York,40.7128,-74.0060
-London,51.5074,-0.1278
-Tokyo,35.6762,139.7674
-```
-
-Or run the location fetcher:
+### 3. Start the environment
 
 ```bash
-python include/get_locations_lat_lon.py
+astro dev start
 ```
 
-### 4. Install Dependencies (Local Development)
+This builds the Airflow containers plus the custom `weather_db` (PostgreSQL) and `pgadmin` services defined in `docker-compose.override.yml`.
 
-```bash
-# Create a virtual environment
-python -m venv venv
+### 4. Access the services
 
-# Activate it
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
+| Service | URL | Credentials |
+|---|---|---|
+| Airflow UI | http://localhost:8080 | `admin` / `admin` |
+| pgAdmin | http://localhost:5050 | as set in `.env` |
+| PostgreSQL (from host) | `localhost:5435` | as set in `.env` |
 
-# Install dependencies
-pip install -r requirements.txt
-```
+### 5. Run the pipeline
 
-### 5. Docker Setup
+In the Airflow UI, unpause `weather_notifier_pipeline`. It runs automatically every 10 minutes, or trigger it manually for testing.
 
-Build and run the application using Docker Compose:
+## Local Development Notes
 
-```bash
-# Build the container
-docker-compose build
+- The `include/` folder is automatically mounted into all Airflow containers by Astro CLI — no manual volume configuration is needed for it.
+- The custom `weather_db` and `pgadmin` services must be explicitly attached to Astro's internal Docker network (`<project>_airflow`) to be reachable from Airflow tasks; this is already configured in `docker-compose.override.yml`.
+- Avoid naming custom services `postgres`, `webserver`, `scheduler`, or other names Astro already uses internally — Docker Compose will merge configurations rather than create separate containers.
+- Database credentials for `weather_db` and `pgadmin` are intended for local development only and are not security-sensitive in the way the OpenWeatherMap or email credentials are.
 
-# Start the Airflow environment
-docker-compose up -d
+## Possible Extensions
 
-# Access the Airflow UI at http://localhost:8080
-```
-
-## Usage
-
-### Running Locally
-
-```bash
-# Make sure your virtual environment is activated and .env is configured
-python dags/main.py
-```
-
-### Running with Airflow
-
-The DAG `weather_notifier` is automatically available in Airflow once deployed:
-
-1. Navigate to the Airflow Web UI (http://localhost:8080)
-2. Find the `weather_notifier` DAG
-3. Enable the DAG using the toggle
-4. Trigger it manually or let it run on schedule
-
-### Configuration
-
-**Monitoring Frequency**: Edit the schedule in [dags/weather_notifier.py](dags/weather_notifier.py)
-
-**Adverse Weather Conditions**: Modify the `ADVERSE_CONDITIONS` list in [dags/main.py](dags/main.py):
-
-```python
-ADVERSE_CONDITIONS = ["Rain", "Drizzle", "Thunderstorm"]
-```
-
-## Key Components
-
-### Weather Fetching ([include/weather.py](include/weather.py))
-Handles all API requests to OpenWeather, manages parameters, and parses responses.
-
-### State Management ([include/state.py](include/state.py))
-Tracks weather conditions per location to determine if an alert should be sent (transitions from clear to adverse conditions).
-
-### Email Notifications ([include/email_notifier.py](include/email_notifier.py))
-Formats weather data into HTML emails and sends via Gmail SMTP.
-
-### Logging ([include/logger.py](include/logger.py))
-Provides centralized logging for debugging and monitoring.
-
-## Development
-
-### Running Tests
-
-```bash
-python -m pytest tests/
-```
-
-### Debugging
-
-Enable debug logging by setting in `.env`:
-
-```env
-LOG_LEVEL=DEBUG
-```
-
-## Dependencies
-
-- **apache-airflow-providers-postgres**: PostgreSQL integration for Airflow
-- **pandas**: Data manipulation and analysis
-- **requests**: HTTP library for API calls
-- **python-dotenv**: Environment variable management
-- **pyarrow**: Data serialization
-
-See [requirements.txt](requirements.txt) for complete dependency list.
-
-## Troubleshooting
-
-### Email Not Sending
-- Verify Gmail App Password is correct
-- Check that 2FA is enabled on Gmail account
-- Ensure sender/receiver email addresses are correct in `.env`
-
-### API Rate Limiting
-- Free tier allows 60 calls per minute
-- Increase interval between checks if hitting limits
-
-### State File Issues
-- If state tracking behaves unexpectedly, delete `include/data/state.json` to reset
-- A new state file will be created on next run
-
-## Future Enhancements
-
-- [ ] Database integration for historical data storage
-- [ ] Web dashboard for weather visualization
-- [ ] SMS notifications in addition to email
-- [ ] Customizable alert thresholds (temperature, wind speed)
-- [ ] Multiple recipient support
-- [ ] Weather prediction-based alerts
+- Migrate state and history storage from local PostgreSQL to a managed service (e.g. Supabase) for persistence outside local Docker volumes
+- Add a transformation/aggregation layer (daily average temperature per city, rain frequency per week) to strengthen this as a data engineering portfolio piece
+- Add a lightweight dashboard (Metabase or Grafana) on top of `weather_history` for visual trend analysis
+- Extend alert conditions beyond rain to extreme temperature, high wind, and high humidity
+- Add forecast-based alerts (next 3–12 hours) in addition to current-condition alerts
 
 ## License
 
-[Add your license information here]
-
-## Contact
-
-For questions or issues, please open a GitHub issue or contact the project maintainers.
-
-## Changelog
-
-### v1.0.0
-- Initial release with basic weather monitoring and email alerts
-
+This project is for educational and portfolio purposes.
