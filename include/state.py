@@ -8,6 +8,7 @@ for different cities using PostgreSQL instead of a local JSON file.
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from include.logger import setup_logger, get_logger
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 setup_logger()
 logger = get_logger()
@@ -65,7 +66,7 @@ def get_city_state(city: str) -> dict:
 def update_city_state(city: str, is_raining: bool, alert_sent: bool = False) -> None:
     """Insert or update the weather state for a specific city."""
     hook = PostgresHook(postgres_conn_id=CONN_ID)
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now = datetime.now(tz=ZoneInfo("Asia/Jakarta")).strftime("%Y-%m-%d %H:%M:%S")
 
     with hook.get_conn() as conn:
         cursor = conn.cursor()

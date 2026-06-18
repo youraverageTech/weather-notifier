@@ -11,10 +11,12 @@ from dotenv import load_dotenv
 import pandas as pd  
 from datetime import datetime  
 from include.logger import setup_logger, get_logger  
+from zoneinfo import ZoneInfo
 
 # Initialize logging system for tracking activity and debugging
 setup_logger()
 logger = get_logger()
+JAKARTA_TZ = ZoneInfo("Asia/Jakarta")
 
 
 def get_weather_data(locations: pd.DataFrame, api_key: str, base_url: str) -> list: 
@@ -78,8 +80,8 @@ def get_weather_data(locations: pd.DataFrame, api_key: str, base_url: str) -> li
                         "humidity": humidity,  # Store humidity percentage
                         "wind_speed": wind_speed,  # Store wind speed
                         "weather_conditions": weather_conditions,  # Store main weather condition
-                        "date": datetime.fromtimestamp(data["dt"]).strftime("%Y-%m-%d"),  # Convert Unix timestamp to date
-                        "time": datetime.fromtimestamp(data["dt"]).strftime("%H:%M:%S")  # Convert Unix timestamp to time
+                        "date": datetime.fromtimestamp(data["dt"], tz=JAKARTA_TZ).strftime("%Y-%m-%d"),  # Convert Unix timestamp to date
+                        "time": datetime.fromtimestamp(data["dt"], tz=JAKARTA_TZ).strftime("%H:%M:%S")  # Convert Unix timestamp to time
                     })
                 else:
                     # Log warning if no data was returned for a location
