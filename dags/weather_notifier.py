@@ -61,36 +61,40 @@ def weather_pipeline():
     
     @task()
     def check_and_notify_alerts(weather_data):
-        from include.state import load_state, save_state, get_city_state, should_send_rain_alert, has_rain_stopped, update_city_state
+        from include.state import init_state_table, get_city_state, should_send_rain_alert, has_rain_stopped, update_city_state
+
+        # initialize state table
+        init_state_table()
 
         if not weather_data:
             logger.error("No weather data returned")
             raise ValueError("No weather data returned")
 
-        state = load_state()
         to_notify_started = []
         to_notify_stopped = []
 
         for data in weather_data:
             city = data['location']
-            city_state = get_city_state(state, city)
+            city_state = get_city_state(city)
             is_raining = data.get("weather_conditions") in ADVERSE_CONDITIONS # Checking the weather condition
             
+            alert_triggered = False
+
             if should_send_rain_alert(city_state, is_raining):
                 logger.info(f"Rain started in {city}.")
                 to_notify_started.append(data)
+                alert_triggered = True
 
             elif has_rain_stopped(city_state, is_raining):
                 logger.info(f"Rain stopped in {city}.")
                 to_notify_stopped.append(data)
+                alert_triggered = True
 
             else:
                 logger.info(f"No state change for {city}, skipping notification.")
 
             # Update state for this city
-            state = update_city_state(state, city, is_raining)
-
-            save_state(state)
+            update_city_state(city, is_raining, alert_sent=alert_triggered)
 
         return {
             "to_notify_started": to_notify_started,

@@ -63,8 +63,7 @@ The project evolved from a single Python script into an orchestrated Airflow DAG
 | Orchestration | Apache Airflow (TaskFlow API) via Astro CLI |
 | Language | Python 3.13 |
 | Weather data | OpenWeatherMap API (current weather + geocoding) |
-| State | Json File |
-| history storage | PostgreSQL (Docker) |
+| History storage & State | PostgreSQL (Docker) |
 | Notifications | Gmail SMTP (`smtplib`) |
 | Database admin | pgAdmin (Docker) |
 | Containerization | Docker Compose (via Astro CLI) |
@@ -79,7 +78,6 @@ weather-notifier/
 ├── include/
 │   ├── data/
 │   │   └── weather_locations.csv  # List of cities with lat/lon
-|   |   └── state.json             # List of weather state
 |   ├── logs/
 │   │   └── logger.log             # Log process
 │   ├── weather.py                 # OpenWeatherMap API calls
@@ -136,6 +134,16 @@ This is a simplified version of the transition-detection pattern used in product
 | `humidity` | `INTEGER` | Humidity percentage |
 | `wind_speed` | `FLOAT` | Wind speed in m/s |
 | `date` / `time` | `DATE` / `TIME` | Observation timestamp |
+
+**`weather_state`** — one row per city, current condition only
+
+| Column | Type | Description |
+|---|---|---|
+| `city` | `TEXT` (Primary key) | City name |
+| `is_raining` | `BOOLEAN` | Current rain status |
+| `last_checked` | `TIMESTAMP` | Last time this city was checked |
+| `alert_sent_at` | `TIMESTAMP` | Last time an alert was sent |
+
 
 ## Setup
 
